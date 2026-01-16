@@ -297,5 +297,5 @@ Contribuições são bem-vindas. Recomenda-se seguir o fluxo abaixo:
 
 ---
 
-Este README foi elaborado para fornecer uma visão completa do projeto PD_FOOD – Sistema de Caixa Simples, facilitando a compreensão, configuração e evolução do sistema por novos desenvolvedores.
+Este README foi elaborado para fornecer uma visão completa do projeto Sistema de Caixa Simples, facilitando a compreensão, configuração e evolução do sistema por novos desenvolvedores.
 

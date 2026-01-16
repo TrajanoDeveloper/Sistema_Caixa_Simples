@@ -1,0 +1,409 @@
+unit UFuncionalidades;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
+  Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
+  Vcl.DBCtrls, Vcl.Grids, Vcl.DBGrids, Vcl.Graphics, Uconexao;
+
+type
+  TtipoPersistencia = (Incluir, Alterar, Excluir);
+  TFuncionalidades = class
+  private
+    FConexao: Tconecxao;
+  public
+    Property Conexao: Tconecxao read FConexao write FConexao;
+    // Configurações de Enter como Tab
+    class procedure ConfigurarEnterComoTab(AForm: TForm);
+    class procedure ProcessarEnterComoTab(AForm: TForm; var Key: Word; Shift: TShiftState);
+
+    // Configurações de formatação automática
+    class procedure ConfigurarFormatacaoAutomatica(AControl: TWinControl);
+    class procedure ConfigurarFormatacaoCampos(AForm: TForm);
+    class procedure FormatarCPF_CNPJ(Sender: TObject);
+    class procedure FormatarCEP(Sender: TObject);
+    class procedure FormatarTelefone(Sender: TObject);
+
+    // Configurações de validação
+    class procedure ValidarCamposObrigatorios(AForm: TForm; var AValido: Boolean; var AMensagem: string);
+    class procedure ValidarIdExclusao(const AID: Integer; var APermitido: Boolean; var AMensagem: string);
+
+    // Configurações de DBGrid
+    class procedure ConfigurarDBGrid(ADBGrid: TDBGrid);
+    class procedure RedimensionarColunasDBGrid(ADBGrid: TDBGrid);
+
+    // Utilitários gerais
+    class function ConfirmarAcao(const AMensagem: string): Boolean;
+    class procedure ExibirMensagem(const AMensagem: string; const ATipo: string = 'info');
+    class procedure ConfigurarComponentesForm(AForm: TForm);
+    class function BuscarVersaoSistema: String;
+
+  end;
+
+implementation
+
+uses
+  Vcl.Dialogs, UValidacoes;
+
+{ TFuncionalidades }
+
+class procedure TFuncionalidades.ConfigurarEnterComoTab(AForm: TForm);
+begin
+  if Assigned(AForm) then
+  begin
+    AForm.KeyPreview := True;
+  end;
+end;
+
+class procedure TFuncionalidades.ProcessarEnterComoTab(AForm: TForm; var Key: Word; Shift: TShiftState);
+var
+  I, CurrentIndex: Integer;
+  NextControl: TWinControl;
+begin
+  if (Key = VK_RETURN) and (ssShift in Shift) then
+  begin
+    // Shift + Enter = Tab anterior
+    Key := 0;
+    if Assigned(AForm.ActiveControl) then
+    begin
+      // Encontra o controle anterior na ordem de tab
+      CurrentIndex := AForm.ActiveControl.TabOrder;
+      NextControl := nil;
+      for I := 0 to AForm.ControlCount - 1 do
+      begin
+        if (AForm.Controls[I] is TWinControl) and
+           TWinControl(AForm.Controls[I]).CanFocus and
+           (TWinControl(AForm.Controls[I]).TabOrder < CurrentIndex) then
+        begin
+          if not Assigned(NextControl) or
+             (TWinControl(AForm.Controls[I]).TabOrder > NextControl.TabOrder) then
+            NextControl := TWinControl(AForm.Controls[I]);
+        end;
+      end;
+      if Assigned(NextControl) then
+        NextControl.SetFocus;
+    end;
+  end
+  else if Key = VK_RETURN then
+  begin
+    // Enter = próximo Tab
+    Key := 0;
+    if Assigned(AForm.ActiveControl) then
+    begin
+      // Verifica se é um botão - se for, executa o click
+      if AForm.ActiveControl is TButton then
+        TButton(AForm.ActiveControl).Click
+      else
+      begin
+        // Encontra o próximo controle na ordem de tab
+        CurrentIndex := AForm.ActiveControl.TabOrder;
+        NextControl := nil;
+        for I := 0 to AForm.ControlCount - 1 do
+        begin
+          if (AForm.Controls[I] is TWinControl) and
+             TWinControl(AForm.Controls[I]).CanFocus and
+             (TWinControl(AForm.Controls[I]).TabOrder > CurrentIndex) then
+          begin
+            if not Assigned(NextControl) or
+               (TWinControl(AForm.Controls[I]).TabOrder < NextControl.TabOrder) then
+              NextControl := TWinControl(AForm.Controls[I]);
+          end;
+        end;
+        if Assigned(NextControl) then
+          NextControl.SetFocus;
+      end;
+    end;
+  end;
+end;
+
+class procedure TFuncionalidades.ConfigurarFormatacaoAutomatica(AControl: TWinControl);
+var
+  I: Integer;
+  Control: TControl;
+begin
+  if not Assigned(AControl) then
+    Exit;
+
+  for I := 0 to AControl.ControlCount - 1 do
+  begin
+    Control := AControl.Controls[I];
+
+    if Control is TEdit then
+    begin
+      // Configura eventos baseado no nome do campo
+      if (Pos('CPF', UpperCase(Control.Name)) > 0) or
+         (Pos('CNPJ', UpperCase(Control.Name)) > 0) then
+      begin
+        TEdit(Control).OnExit := FormatarCPF_CNPJ;
+      end
+      else if Pos('CEP', UpperCase(Control.Name)) > 0 then
+      begin
+        TEdit(Control).OnExit := FormatarCEP;
+      end
+      else if (Pos('TELEFONE', UpperCase(Control.Name)) > 0) or
+              (Pos('CELULAR', UpperCase(Control.Name)) > 0) then
+      begin
+        TEdit(Control).OnExit := FormatarTelefone;
+      end;
+    end
+    else if Control is TWinControl then
+    begin
+      // Recursivo para controles filhos
+      ConfigurarFormatacaoAutomatica(TWinControl(Control));
+    end;
+  end;
+end;
+
+class procedure TFuncionalidades.FormatarCPF_CNPJ(Sender: TObject);
+var
+  Edit: TEdit;
+  Texto: string;
+begin
+  if not (Sender is TEdit) then
+    Exit;
+
+  Edit := TEdit(Sender);
+  Texto := Trim(Edit.Text);
+
+  if Texto <> '' then
+  begin
+    Edit.Text := TValidacoes.FormatarCPF_CNPJ(Texto);
+  end;
+end;
+
+class procedure TFuncionalidades.FormatarCEP(Sender: TObject);
+var
+  Edit: TEdit;
+  Texto: string;
+begin
+  if not (Sender is TEdit) then
+    Exit;
+
+  Edit := TEdit(Sender);
+  Texto := Trim(Edit.Text);
+
+  if Texto <> '' then
+  begin
+    Edit.Text := TValidacoes.FormatarCEP(Texto);
+  end;
+end;
+
+class procedure TFuncionalidades.FormatarTelefone(Sender: TObject);
+var
+  Edit: TEdit;
+  Texto, Numeros: string;
+begin
+  if not (Sender is TEdit) then
+    Exit;
+
+  Edit := TEdit(Sender);
+  Texto := Trim(Edit.Text);
+
+  if Texto <> '' then
+  begin
+    Numeros := TValidacoes.SomenteNumeros(Texto);
+
+    case Length(Numeros) of
+      10: Edit.Text := Format('(%s) %s-%s', [Copy(Numeros, 1, 2), Copy(Numeros, 3, 4), Copy(Numeros, 7, 4)]);
+      11: Edit.Text := Format('(%s) %s-%s', [Copy(Numeros, 1, 2), Copy(Numeros, 3, 5), Copy(Numeros, 8, 4)]);
+    else
+      Edit.Text := Texto;
+    end;
+  end;
+end;
+
+class procedure TFuncionalidades.ValidarCamposObrigatorios(AForm: TForm; var AValido: Boolean; var AMensagem: string);
+var
+  I: Integer;
+  Control: TControl;
+  CamposVazios: TStringList;
+begin
+  AValido := True;
+  AMensagem := '';
+  CamposVazios := TStringList.Create;
+  try
+    for I := 0 to AForm.ControlCount - 1 do
+    begin
+      Control := AForm.Controls[I];
+
+      if Control is TEdit then
+      begin
+        // Verifica campos obrigatórios baseado no nome
+        if (Pos('NOME', UpperCase(Control.Name)) > 0) or
+           (Pos('CPF', UpperCase(Control.Name)) > 0) or
+           (Pos('CNPJ', UpperCase(Control.Name)) > 0) then
+        begin
+          if Trim(TEdit(Control).Text) = '' then
+          begin
+            CamposVazios.Add(Control.Name);
+          end;
+        end;
+      end;
+    end;
+
+    if CamposVazios.Count > 0 then
+    begin
+      AValido := False;
+      AMensagem := 'Os seguintes campos são obrigatórios:' + sLineBreak;
+      for I := 0 to CamposVazios.Count - 1 do
+      begin
+        AMensagem := AMensagem + '- ' + CamposVazios[I] + sLineBreak;
+      end;
+    end;
+
+  finally
+    CamposVazios.Free;
+  end;
+end;
+
+class procedure TFuncionalidades.ValidarIdExclusao(const AID: Integer; var APermitido: Boolean; var AMensagem: string);
+begin
+  APermitido := True;
+  AMensagem := '';
+
+  // IDs que não podem ser excluídos (conforme especificação: 1, 5, 8, 10, 15)
+  if (AID = 1) or (AID = 5) or (AID = 8) or (AID = 10) or (AID = 15) then
+  begin
+    APermitido := False;
+    AMensagem := Format('O registro com ID %d não pode ser excluído pois faz parte dos dados protegidos do sistema.', [AID]);
+  end;
+end;
+
+class procedure TFuncionalidades.ConfigurarDBGrid(ADBGrid: TDBGrid);
+begin
+  if not Assigned(ADBGrid) then
+    Exit;
+
+  with ADBGrid do
+  begin
+    Options := Options + [dgRowSelect, dgAlwaysShowSelection];
+    Options := Options - [dgEditing];
+    ReadOnly := True;
+
+    // Configurações visuais
+    Color := clWindow;
+    FixedColor := clBtnFace;
+
+    // Fonte
+    Font.Name := 'Tahoma';
+    Font.Size := 8;
+  end;
+end;
+
+class procedure TFuncionalidades.RedimensionarColunasDBGrid(ADBGrid: TDBGrid);
+var
+  I: Integer;
+  TotalWidth, AvailableWidth: Integer;
+begin
+  if not Assigned(ADBGrid) or not Assigned(ADBGrid.DataSource) or
+     not Assigned(ADBGrid.DataSource.DataSet) or
+     not ADBGrid.DataSource.DataSet.Active then
+    Exit;
+
+  TotalWidth := 0;
+  AvailableWidth := ADBGrid.ClientWidth - 20; // Margem para scrollbar
+
+  // Calcula largura proporcional das colunas
+  for I := 0 to ADBGrid.Columns.Count - 1 do
+  begin
+    case I of
+      0: ADBGrid.Columns[I].Width := 60;  // ID
+      1: ADBGrid.Columns[I].Width := 200; // Nome
+      2: ADBGrid.Columns[I].Width := 120; // CPF/CNPJ
+      3: ADBGrid.Columns[I].Width := 80;  // CEP
+      4: ADBGrid.Columns[I].Width := 150; // Endereço
+    else
+      ADBGrid.Columns[I].Width := 100;
+    end;
+
+    TotalWidth := TotalWidth + ADBGrid.Columns[I].Width;
+  end;
+
+  // Ajusta se necessário
+  if (TotalWidth < AvailableWidth) and (ADBGrid.Columns.Count > 0) then
+  begin
+    ADBGrid.Columns[1].Width := ADBGrid.Columns[1].Width + (AvailableWidth - TotalWidth);
+  end;
+end;
+
+class function TFuncionalidades.ConfirmarAcao(const AMensagem: string): Boolean;
+begin
+  Result := MessageDlg(AMensagem, mtConfirmation, [mbYes, mbNo], 0) = mrYes;
+end;
+
+class procedure TFuncionalidades.ExibirMensagem(const AMensagem: string; const ATipo: string);
+var
+  TipoMsg: TMsgDlgType;
+begin
+  if ATipo = 'erro' then
+    TipoMsg := mtError
+  else if ATipo = 'aviso' then
+    TipoMsg := mtWarning
+  else if ATipo = 'pergunta' then
+    TipoMsg := mtConfirmation
+  else
+    TipoMsg := mtInformation;
+
+  MessageDlg(AMensagem, TipoMsg, [mbOK], 0);
+end;
+
+
+class procedure TFuncionalidades.ConfigurarFormatacaoCampos(AForm: TForm);
+begin
+  if not Assigned(AForm) then
+    Exit;
+
+  // Chama o método de formatação automática existente
+  ConfigurarFormatacaoAutomatica(AForm);
+end;
+
+class function TFuncionalidades.BuscarVersaoSistema: String;
+var
+  InfoSize: DWORD;
+  VerBuffer: Pointer;
+  FI: PVSFixedFileInfo;
+  VerSize: UINT;
+  FileName: string;
+begin
+  Result := 'N/A';
+  FileName := ParamStr(0); // Obtém o caminho completo do executável atual
+
+  InfoSize := GetFileVersionInfoSize(PChar(FileName), InfoSize);
+  if InfoSize = 0 then
+    Exit;
+
+  GetMem(VerBuffer, InfoSize);
+  try
+    if GetFileVersionInfo(PChar(FileName), 0, InfoSize, VerBuffer) then
+    begin
+      if VerQueryValue(VerBuffer, '\', Pointer(FI), VerSize) then
+      begin
+        Result := Format('%d.%d.%d.%d',
+                         [FI.dwFileVersionMS shr 16,
+                          FI.dwFileVersionMS and $FFFF,
+                          FI.dwFileVersionLS shr 16,
+                          FI.dwFileVersionLS and $FFFF]);
+      end;
+    end;
+  finally
+    FreeMem(VerBuffer);
+  end;
+end;
+
+class procedure TFuncionalidades.ConfigurarComponentesForm(AForm: TForm);
+begin
+  if not Assigned(AForm) then
+    Exit;
+
+  // Configura Enter como Tab
+  ConfigurarEnterComoTab(AForm);
+
+  // Configura formatação automática
+  ConfigurarFormatacaoAutomatica(AForm);
+
+  // Configura DBGrids se houver
+  // (será feito individualmente em cada form)
+end;
+
+end.

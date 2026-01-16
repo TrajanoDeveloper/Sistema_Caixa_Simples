@@ -1,0 +1,416 @@
+unit UctrlVendas;
+
+interface
+uses
+  System.SysUtils, System.Classes, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def,
+  FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Phys.FB,
+  FireDAC.Phys.FBDef, FireDAC.VCLUI.Wait, FireDAC.Comp.Client, Data.DB,
+  FireDAC.Stan.Param, FireDAC.DatS, FireDAC.DApt.Intf, FireDAC.DApt,
+  FireDAC.Comp.DataSet, FireDAC.Phys.IBBase, Dialogs, Datasnap.DBClient,
+  Datasnap.Provider,Data.Win.ADODB,Uconexao, vcl.Controls, Vcl.DBCtrls,
+  Vcl.Forms, UFuncionalidades;
+
+type
+
+  TUCtrlVendas = class
+    private
+      FCodigoVenda: integer;
+      FCodigoProduto: integer;
+      FcodigoItem: integer;
+      FQuantidade: integer;
+      FValor: Double;
+
+      FvalorBruto: Double;
+      FValorLiquido: Double;
+      FValorDesconto: Double;
+      FvalorPercentual: Double;
+      FCodigoReceita: integer;
+      FCodigoDesconto : integer;
+      FDescricaoRFeceita: string;
+      FDescricaoDesconto: String;
+
+      Function ExecutarSQL(PSQl: string): Boolean;
+
+    public
+      QueryGrupoProduto : TFDQuery;
+      DtsGrupoProduto : TDataSource;
+      QueryProduto : TFDQuery;
+      DtsProduto : TDataSource;
+      QueryVenda: TFDQuery;
+      DtsVenda: TDataSource;
+      QueryItensVenda: TFDQuery;
+      DtsItensVenda: TDataSource;
+      CdsTipoPagamentos: TClientDataSet;
+      DtsTipoPagamentos: TDataSource;
+      CdsTipoDescontos: TClientDataSet;
+      DtsTipoDescontos: TDataSource;
+      QueryAux: TFDQuery;
+      DtsAux: TDataSource;
+      QueryDetalheVenda: TFDQuery;
+      DtsDetalheVenda: TDataSource;
+      constructor Create;
+      procedure PersistenciaVenda(PTipoPersistencia: TtipoPersistencia; PStatus: Integer = 0);
+      procedure PersistenciaItemVenda(PTipoPersistencia: TtipoPersistencia; PCodigoGrupoProduto: Integer = 0);
+      procedure PersistenciaVendaReceita(PTipoPersistencia: TtipoPersistencia);
+      procedure PersistenciaVendadesconto(PTipoPersistencia: TtipoPersistencia);
+      procedure CarregarItensVenda(PCodigoVenda: integer);
+      procedure CarregarVendas(PdataIni: TDate; PdataFim: TDate; PStatus: integer);
+      procedure CriarTipoPagamentos;
+      procedure CriarTipoDescontos;
+      Procedure RetornaCodigoVenda;
+      procedure CarregarDetalheVenda(PcodigoVenda: integer);
+      property CodigoVenda: Integer read FCodigoVenda;
+      property CodigoProduto: integer read FCodigoProduto write FCodigoProduto;
+      property CodigoItem: integer read FcodigoItem write FcodigoItem;
+      property Quantidade: integer read FQuantidade write FQuantidade;
+      property Valor: Double read FValor write FValor;
+      property ValorBrutpo: Double read FvalorBruto write FvalorBruto;
+      property ValorLiquido: Double read FValorLiquido write FValorLiquido;
+      property ValorDesconto: Double read FValorDesconto write FValorDesconto;
+      property ValorPercentual: Double read FvalorPercentual write FvalorPercentual;
+      property CodigoReceita: Integer read FCodigoReceita write FCodigoReceita;
+      property CodidoDesCconto: Integer read FCodigoDesconto write FCodigoDesconto;
+      property DescricaoReceita: string read FDescricaoRFeceita write FDescricaoRFeceita;
+      property DescricaoDesconto: string read FDescricaoDesconto write FDescricaoDesconto;
+
+  end;
+
+implementation
+
+{ TUCtrlVendas }
+
+procedure TUCtrlVendas.CarregarDetalheVenda(PcodigoVenda: integer);
+begin
+  QueryDetalheVenda.Close;
+  QueryDetalheVenda.SQL.Clear;
+  QueryDetalheVenda.sql.Add('SELECT                                                                                                                ');
+  QueryDetalheVenda.sql.Add('  VI.CODIGO_SEQUENCIAL,                                                                                               ');
+  QueryDetalheVenda.sql.Add('  CP.DESCRICAO,                                                                                                       ');
+  QueryDetalheVenda.sql.Add('  CP.VALOR,                                                                                                           ');
+  QueryDetalheVenda.sql.Add('  VI.QTD,                                                                                                             ');
+  QueryDetalheVenda.sql.Add('  CAST(REPLACE(CAST(CP.VALOR AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_FORMATADO,                       ');
+  QueryDetalheVenda.sql.Add('  VI.VALOR_SUBTOTAL,                                                                                                  ');
+  QueryDetalheVenda.sql.Add('  CAST(REPLACE(CAST(VI.VALOR_SUBTOTAL AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_SUBTOTAL_FORMATADO,     ');
+  QueryDetalheVenda.sql.Add('  VO.VALOR_PERCENTUAL,                                                                                                ');
+  QueryDetalheVenda.sql.Add('  CAST(REPLACE(CAST(VO.VALOR_PERCENTUAL AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_PERCENTUAL_FORMATADO, ');
+  QueryDetalheVenda.sql.Add('  VD.VALOR_LIQUIDO,                                                                                                   ');
+  QueryDetalheVenda.sql.Add('  CAST(REPLACE(CAST(VD.VALOR_LIQUIDO AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_LIQUIDO_FORMATADO,       ');
+  QueryDetalheVenda.sql.Add('  VO.DESCRICAO_DESCONTO,                                                                                              ');
+  QueryDetalheVenda.sql.Add('  CAST(REPLACE(CAST(VD.VALOR_DESCONTO AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_DESCONTO_FORMATADO      ');
+  QueryDetalheVenda.sql.Add('FROM                                                                                                                  ');
+  QueryDetalheVenda.sql.Add('  VENDA VD                                                                                                            ');
+  QueryDetalheVenda.sql.Add('  JOIN VENDAITEM VI                                                                                                   ');
+  QueryDetalheVenda.sql.Add('   ON VI.CODIGO_VENDA = VD.CODIGO                                                                                     ');
+  QueryDetalheVenda.sql.Add('  JOIN CADPRODUTO CP                                                                                                  ');
+  QueryDetalheVenda.sql.Add('   ON CP.CODIGO = VI.CODIGO_PRODUTO                                                                                   ');
+  QueryDetalheVenda.sql.Add('  JOIN VENDARCEITA VR                                                                                                 ');
+  QueryDetalheVenda.sql.Add('   ON VR.CODIGO_VENDA = VD.CODIGO                                                                                     ');
+  QueryDetalheVenda.sql.Add('  JOIN VENDADESCONTO VO                                                                                               ');
+  QueryDetalheVenda.sql.Add('   ON VO.CODIGO_VENDA = VD.CODIGO                                                                                     ');
+  QueryDetalheVenda.sql.Add('WHERE                                                                                                                 ');
+  QueryDetalheVenda.sql.Add('  VD.CODIGO = '+IntToStr(PcodigoVenda)+'                                                                              ');
+  QueryDetalheVenda.sql.Add('ORDER BY VI.CODIGO_SEQUENCIAL                                                                                         ');
+
+  QueryDetalheVenda.Open;
+
+end;
+
+procedure TUCtrlVendas.CarregarItensVenda(PCodigoVenda: integer);
+begin
+  QueryItensVenda.Close;
+  QueryItensVenda.sql.Clear;
+  QueryItensVenda.SQL.Add('SELECT                                                                                                           ');
+  QueryItensVenda.SQL.Add('  VI.CODIGO_SEQUENCIAL,                                                                                          ');
+  QueryItensVenda.SQL.Add('  VI.CODIGO_VENDA,                                                                                               ');
+  QueryItensVenda.SQL.Add('  VI.CODIGO_PRODUTO,                                                                                             ');
+  QueryItensVenda.SQL.Add('  CP.DESCRICAO,                                                                                                  ');
+  QueryItensVenda.SQL.Add('  VI.VALOR,                                                                                                      ');
+  QueryItensVenda.SQL.Add('  CAST(REPLACE(CAST(VI.VALOR AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_FORMATADO,                  ');
+  QueryItensVenda.SQL.Add('  VI.QTD,                                                                                                        ');
+  QueryItensVenda.SQL.Add('  VI.VALOR_SUBTOTAL,                                                                                             ');
+  QueryItensVenda.SQL.Add('  CAST(REPLACE(CAST(VI.VALOR_SUBTOTAL AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_SUBTOTAL_FORMATADO ');
+  QueryItensVenda.SQL.Add('FROM                                                                                                             ');
+  QueryItensVenda.SQL.Add('  VENDAITEM VI                                                                                                   ');
+  QueryItensVenda.SQL.Add('  JOIN CADPRODUTO CP                                                                                             ');
+  QueryItensVenda.SQL.Add('   ON VI.CODIGO_PRODUTO = CP.CODIGO                                                                              ');
+  QueryItensVenda.SQL.Add('  JOIN VENDA VD                                                                                                  ');
+  QueryItensVenda.SQL.Add('   ON VD.CODIGO = VI.CODIGO_VENDA                                                                                ');
+  QueryItensVenda.SQL.Add('WHERE                                                                                                            ');
+  QueryItensVenda.SQL.Add('  VD.CODIGO ='+ IntToStr(PCodigoVenda));
+
+  QueryItensVenda.Open;
+end;
+
+procedure TUCtrlVendas.CarregarVendas(PdataIni: TDate; PdataFim: TDate; PStatus: integer);
+begin
+  QueryVenda.Close;
+  QueryVenda.SQL.Clear;
+  QueryVenda.SQL.Add('SELECT                                                                                                                         ');
+  QueryVenda.SQL.Add('  VD.CODIGO,                                                                                                                   ');
+  QueryVenda.SQL.Add('  VD.DATA,                                                                                                                     ');
+  QueryVenda.SQL.Add('  CAST(REPLACE(CAST(VD.VALOR_BRUTO AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_BRUTO_FORMATADO,                    ');
+  QueryVenda.SQL.Add('  CAST(REPLACE(CAST(VD.VALOR_DESCONTO AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_DESCONTO_FORMATADO,              ');
+  QueryVenda.SQL.Add('  CAST(REPLACE(CAST(VD.VALOR_LIQUIDO AS VARCHAR(20)), ''.'', '','') AS VARCHAR(20)) AS VALOR_LIQUIDO_FORMATADO,                ');
+  QueryVenda.SQL.Add('  VD.VALOR_LIQUIDO,                                                                                                            ');
+  QueryVenda.SQL.Add('  VD.CANCELADA                                                                                                                 ');
+  QueryVenda.SQL.Add('FROM                                                                                                                           ');
+  QueryVenda.SQL.Add('  VENDA VD                                                                                                                     ');
+  QueryVenda.SQL.Add('WHERE                                                                                                                          ');
+  QueryVenda.SQL.Add('  VD.DATA BETWEEN '+ QuotedStr(FormatDateTime('yyyy-mm-dd',PdataIni)) +' AND '+ QuotedStr(FormatDateTime('yyyy-mm-dd',PdataFim)));
+  if PStatus = 1 then
+  QueryVenda.SQL.Add('  AND VD.CANCELADA = ''N''                                                                                                         ');
+  if PStatus = 2 then
+  QueryVenda.SQL.Add('  AND VD.CANCELADA = ''S''                                                                                                         ');
+  QueryVenda.SQL.Add('ORDER BY VD.DATA DESC                                                                                                          ');
+
+  QueryVenda.Open;
+
+end;
+
+constructor TUCtrlVendas.Create;
+var
+  Conexao: Tconecxao;
+begin
+Conexao := Tconecxao.Create;
+   try
+     QueryVenda := TFDQuery.Create(nil);
+     DtsVenda := TDataSource.Create(nil);
+     DtsVenda.DataSet := QueryVenda;
+     QueryItensVenda := TFDQuery.Create(nil);
+     DtsItensVenda := TDataSource.Create(nil);
+     DtsItensVenda.DataSet := QueryItensVenda;
+     CdsTipoPagamentos := TClientDataSet.Create(nil);
+     DtsTipoPagamentos := TDataSource.Create(nil);
+     DtsTipoPagamentos.DataSet := CdsTipoPagamentos;
+     CdsTipoDescontos := TClientDataSet.Create(nil);
+     DtsTipoDescontos := TDataSource.Create(nil);
+     DtsTipoDescontos.DataSet := CdsTipoDescontos;
+     QueryVenda.Connection := Conexao.Connection;
+     QueryItensVenda.Connection := Conexao.Connection;
+     QueryGrupoProduto := TFDQuery.Create(nil);
+     DtsGrupoProduto := TDataSource.Create(nil);
+     DtsGrupoProduto.DataSet := QueryGrupoProduto;
+     QueryProduto := TFDQuery.Create(nil);
+     DtsProduto := TDataSource.Create(nil);
+     DtsProduto.DataSet := QueryProduto;
+     QueryAux := TFDQuery.Create(nil);
+     DtsAux := TDataSource.Create(nil);
+     DtsAux.DataSet := QueryAux;
+     QueryDetalheVenda := TFDQuery.Create(nil);
+     DtsDetalheVenda := TDataSource.Create(nil);
+     DtsDetalheVenda.DataSet := QueryDetalheVenda;
+     QueryDetalheVenda.Connection := Conexao.Connection;
+     Conexao.CarregarParemtrosDeConexao;
+     QueryGrupoProduto.Connection := Conexao.Connection;
+     QueryProduto.Connection := Conexao.Connection;
+     QueryAux.Connection := Conexao.Connection;
+   finally
+     FreeAndNil(Conexao);
+   end;
+
+end;
+
+procedure TUCtrlVendas.CriarTipoDescontos;
+begin
+ with CdsTipoDescontos.FieldDefs do
+    begin
+      Add('CODIGO', ftInteger);
+      Add('DESCRICAO', ftString, 100);
+      Add('PERCENTUAL', ftInteger);
+    end;
+
+    // Criar os campos em memória
+    CdsTipoDescontos.CreateDataSet;
+
+
+    CdsTipoDescontos.Append;
+    CdsTipoDescontos.FieldByName('CODIGO').AsInteger := 1;
+    CdsTipoDescontos.FieldByName('DESCRICAO').AsString := 'Desconto de 10%';
+    CdsTipoDescontos.FieldByName('PERCENTUAL').AsInteger := 10;
+    CdsTipoDescontos.Post;
+
+    CdsTipoDescontos.Append;
+    CdsTipoDescontos.FieldByName('CODIGO').AsInteger := 2;
+    CdsTipoDescontos.FieldByName('DESCRICAO').AsString := 'Desconto de Funcionário';
+    CdsTipoDescontos.FieldByName('PERCENTUAL').AsInteger := 50;
+    CdsTipoDescontos.Post;
+
+    CdsTipoDescontos.Append;
+    CdsTipoDescontos.FieldByName('CODIGO').AsInteger := 3;
+    CdsTipoDescontos.FieldByName('DESCRICAO').AsString := 'Desconto de Cortesia';
+    CdsTipoDescontos.FieldByName('PERCENTUAL').AsInteger := 90;
+    CdsTipoDescontos.Post;
+end;
+
+procedure TUCtrlVendas.CriarTipoPagamentos;
+begin
+  with CdsTipoPagamentos.FieldDefs do
+    begin
+      Add('CODIGO', ftInteger);
+      Add('DESCRICAO', ftString, 100);
+    end;
+
+    // Criar os campos em memória
+    CdsTipoPagamentos.CreateDataSet;
+
+
+    CdsTipoPagamentos.Append;
+    CdsTipoPagamentos.FieldByName('CODIGO').AsInteger := 1;
+    CdsTipoPagamentos.FieldByName('DESCRICAO').AsString := 'Dinheiro';
+    CdsTipoPagamentos.Post;
+
+    CdsTipoPagamentos.Append;
+    CdsTipoPagamentos.FieldByName('CODIGO').AsInteger := 2;
+    CdsTipoPagamentos.FieldByName('DESCRICAO').AsString := 'Cartão Crédito';
+    CdsTipoPagamentos.Post;
+
+    CdsTipoPagamentos.Append;
+    CdsTipoPagamentos.FieldByName('CODIGO').AsInteger := 3;
+    CdsTipoPagamentos.FieldByName('DESCRICAO').AsString := 'Cartão Débito';
+    CdsTipoPagamentos.Post;
+end;
+
+function TUCtrlVendas.ExecutarSQL(PSQl: string): Boolean;
+begin
+Result := False;
+  QueryAux.Connection.StartTransaction;
+  try
+    QueryAux.SQL.Text := PSQL;
+    QueryAux.ExecSQL;
+    QueryAux.Connection.Commit;
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      QueryAux.Connection.Rollback;
+      MessageDlg('Erro ao executar SQL: ' + E.Message,TMsgDlgType.mtError ,[TMsgDlgBtn.mbOK],0);
+      Result := False;
+    end;
+  end;
+end;
+
+procedure TUCtrlVendas.PersistenciaVenda(
+  PTipoPersistencia: TtipoPersistencia; PStatus: Integer);
+var
+  VSql: String;
+  begin
+  case PTipoPersistencia of
+    Incluir:
+      begin
+        VSql :='INSERT INTO VENDA ( DATA, CANCELADA) VALUES                  '+
+               '('+ QuotedStr(FormatDateTime('yyyy-mm-dd',now)) +','+' ''N'')';
+
+        ExecutarSQL(VSql);
+      end;
+    Alterar:
+      begin
+        if PStatus > 0 then
+        begin
+          if PStatus = 1 then
+            VSql := 'UPDATE VENDA SET CANCELADA = ''N'' WHERE CODIGO ='+ IntToStr(FCodigoVenda)
+          else
+            VSql := 'UPDATE VENDA SET CANCELADA = ''S'' WHERE CODIGO ='+ IntToStr(FCodigoVenda);
+
+          ExecutarSQL(VSql);
+        end
+        else // AQUI PARA RECEBER AO COINFIRMAR O PAGTO
+          VSql := 'UPDATE VENDA SET '+
+                  'VALOR_BRUTO = '+ TFuncionalidades.FormatarTextoValor(FloatToStr(FvalorBruto))+', '+
+                  'VALOR_DESCONTO = '+ TFuncionalidades.FormatarTextoValor(FloatToStr(FValorDesconto))+', '+
+                  'VALOR_LIQUIDO = '+ TFuncionalidades.FormatarTextoValor(FloatToStr(FValorLiquido))+' '+
+                  ' WHERE CODIGO ='+ IntToStr(FCodigoVenda);
+          ExecutarSQL(VSql);
+      end;
+  end;
+end;
+
+procedure TUCtrlVendas.PersistenciaVendadesconto(
+  PTipoPersistencia: TtipoPersistencia);
+var
+  VSql: String;
+  begin
+  case PTipoPersistencia of
+    Incluir:
+      begin
+         if FCodigoDesconto > 0 then
+         begin
+           VSql := 'INSERT INTO VENDADESCONTO ( CODIGO_VENDA, CODIGO_DESCONTO, DESCRICAO_DESCONTO, VALOR_PERCENTUAL)'+
+                 ' VALUES '+
+                 '('+IntToStr(FCodigoVenda)+', '+
+                 IntToStr(FCodigoDesconto)+' ,'+
+                 QuotedStr(FDescricaoDesconto)+' ,'+
+                 TFuncionalidades.FormatarTextoValor(FloatToStr(FvalorPercentual))+')';
+           ExecutarSQL(VSql);
+         end;
+
+      end;
+  end;
+end;
+
+procedure TUCtrlVendas.PersistenciaVendaReceita(
+  PTipoPersistencia: TtipoPersistencia);
+var
+  VSql: String;
+  begin
+  case PTipoPersistencia of
+    Incluir:
+      begin
+         VSql := 'INSERT INTO VENDARCEITA ( CODIGO_VENDA, CODIGO_RECEITA, DESCRICAO_RECEITA, VALOR)'+
+                 ' VALUES '+
+                 '('+IntToStr(FCodigoVenda)+', '+
+                 IntToStr(FCodigoReceita)+' ,'+
+                 QuotedStr(FDescricaoRFeceita)+' ,'+
+                 TFuncionalidades.FormatarTextoValor(FloatToStr(FValorLiquido))+')';
+        ExecutarSQL(VSql);
+      end;
+  end;
+
+end;
+
+procedure TUCtrlVendas.RetornaCodigoVenda;
+begin
+  QueryAux.close;
+  QueryAux.sql.Clear;
+  QueryAux.sql.Add('SELECT MAX (CODIGO) AS CODIGO FROM VENDA');
+  QueryAux.Open;
+
+  if not QueryAux.IsEmpty then
+    FCodigoVenda := QueryAux.FieldByName('CODIGO').AsInteger;
+end;
+
+procedure TUCtrlVendas.PersistenciaItemVenda(PTipoPersistencia: TtipoPersistencia;
+  PCodigoGrupoProduto: Integer);
+var
+  VSql: String;
+begin
+   case PTipoPersistencia of
+     Incluir:
+       begin
+         VSql := 'INSERT INTO VENDAITEM (CODIGO_VENDA, CODIGO_PRODUTO, VALOR, QTD)'+
+                 ' VALUES'+
+                 '( '+IntToStr(FCodigoVenda)+', '+
+                 IntToStr(FCodigoProduto)+' ,'+
+                 TFuncionalidades.FormatarTextoValor(FloatToStr(FValor) )+' ,'+
+                 IntToStr(FQuantidade)+' )';
+
+
+         ExecutarSQL(VSql);
+       end;
+     Alterar:
+       begin
+       end;
+     Excluir:
+       begin
+         VSql :='DELETE FROM VENDAITEM WHERE CODIGO_VENDA ='+ IntToStr(FCodigoVenda)+' AND CODIGO_SEQUENCIAL = '+ IntToStr(FcodigoItem);
+
+         ExecutarSQL(VSql);
+       end;
+   end;
+end;
+
+
+
+
+
+end.

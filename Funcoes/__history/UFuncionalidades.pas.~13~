@@ -1,0 +1,89 @@
+unit UFuncionalidades;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
+  Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
+  Vcl.DBCtrls, Vcl.Grids, Vcl.DBGrids, Vcl.Graphics;
+
+type
+  TtipoPersistencia = (Incluir, Alterar, Excluir);
+  TFuncionalidades = class
+  public
+    class function BuscarVersaoSistema: String;
+    class function FormatarValorTexto(PValor: Double): string;
+    class function FormatarTextoValor(PValor: string): string;
+  end;
+
+implementation
+
+uses
+  Vcl.Dialogs;
+
+{ TFuncionalidades }
+
+
+
+class function TFuncionalidades.FormatarTextoValor(PValor: string): string; //aqui
+var                                                                                                                                                                                                                                             ]
+  S: string;
+begin
+  S := PValor.Trim;
+
+  // Remove R$, espaços e pontos de milhar
+  S := StringReplace(S, 'R$', '', [rfReplaceAll, rfIgnoreCase]);
+  S := StringReplace(S, '.', '', [rfReplaceAll]);
+  S := StringReplace(S, ' ', '', [rfReplaceAll]);
+
+  // Substitui vírgula decimal por ponto
+  S := StringReplace(S, ',', '.', [rfReplaceAll]);
+
+  if S = '' then
+    Result := '0'
+  else
+    Result := S;
+
+end;
+
+class function TFuncionalidades.FormatarValorTexto(PValor: Double): string;   // aqui
+begin
+  Result := FormatFloat('#,##0.00', PValor);
+end;
+
+
+
+class function TFuncionalidades.BuscarVersaoSistema: String;  //aqui
+var
+  InfoSize: DWORD;
+  VerBuffer: Pointer;
+  FI: PVSFixedFileInfo;
+  VerSize: UINT;
+  FileName: string;
+begin
+  Result := 'N/A';
+  FileName := ParamStr(0); // Obtém o caminho completo do executável atual
+
+  InfoSize := GetFileVersionInfoSize(PChar(FileName), InfoSize);
+  if InfoSize = 0 then
+    Exit;
+
+  GetMem(VerBuffer, InfoSize);
+  try
+    if GetFileVersionInfo(PChar(FileName), 0, InfoSize, VerBuffer) then
+    begin
+      if VerQueryValue(VerBuffer, '\', Pointer(FI), VerSize) then
+      begin
+        Result := Format('%d.%d.%d.%d',
+                         [FI.dwFileVersionMS shr 16,
+                          FI.dwFileVersionMS and $FFFF,
+                          FI.dwFileVersionLS shr 16,
+                          FI.dwFileVersionLS and $FFFF]);
+      end;
+    end;
+  finally
+    FreeMem(VerBuffer);
+  end;
+end;
+
+end.

@@ -1,0 +1,313 @@
+unit FormRelVendas;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Data.DB, Vcl.Grids,
+  Vcl.DBGrids, Vcl.StdCtrls, Vcl.WinXCalendars, Vcl.WinXPanels, UCtrlProdutos, UctrlVendas,
+  ppParameter, ppDesignLayer, ppBands, ppCtrls, ppVar, ppPrnabl, ppClass,
+  ppCache, ppProd, ppReport, ppComm, ppRelatv, ppDB, ppDBPipe, Vcl.Imaging.jpeg;
+
+type
+  TFrmRelVendas = class(TForm)
+    Panel1: TPanel;
+    Panel2: TPanel;
+    GroupBox1: TGroupBox;
+    GroupBox2: TGroupBox;
+    DBVendas: TDBGrid;
+    Panel3: TPanel;
+    LbTotalVendas: TLabel;
+    LbValorTotal: TLabel;
+    BtnDetalhe: TButton;
+    BtnGFechar: TButton;
+    DtaInicial: TCalendarPicker;
+    DtaFinal: TCalendarPicker;
+    BtnFiltro: TButton;
+    BtnLimpaFiltro: TButton;
+    CmbStatus: TComboBox;
+    Label1: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
+    CardPanel1: TCardPanel;
+    GroupBox3: TGroupBox;
+    Card1: TCard;
+    GroupBox4: TGroupBox;
+    DBItensVenda: TDBGrid;
+    GroupBox5: TGroupBox;
+    GroupBox6: TGroupBox;
+    GroupBox7: TGroupBox;
+    BtnFecharDetalhe: TButton;
+    LbCodigoVenda: TLabel;
+    LbDataVenda: TLabel;
+    LbStatusVenda: TLabel;
+    LbFormaPagamento: TLabel;
+    LbValorBruto: TLabel;
+    LbValorDesconto: TLabel;
+    LbTipoDesconto: TLabel;
+    LbValorLiquido: TLabel;
+    Shape1: TShape;
+    PipelineVenda: TppDBPipeline;
+    ReportVenda: TppReport;
+    ppHeaderBand1: TppHeaderBand;
+    lbtitulo: TppLabel;
+    paginacao: TppSystemVariable;
+    data: TppSystemVariable;
+    ppLine1: TppLine;
+    ppLine2: TppLine;
+    lbcodigo: TppLabel;
+    lbdata: TppLabel;
+    lvvalbruto: TppLabel;
+    lddesconto: TppLabel;
+    lbliquido: TppLabel;
+    lbcancelada: TppLabel;
+    ppDetailBand1: TppDetailBand;
+    DtNome: TppDBText;
+    Dtid: TppDBText;
+    DtCPF_CNPJ: TppDBText;
+    DtCEP: TppDBText;
+    DtBairro: TppDBText;
+    DtCidade: TppDBText;
+    ppFooterBand1: TppFooterBand;
+    LbURL: TppLabel;
+    LbEndereco: TppLabel;
+    ppDesignLayers1: TppDesignLayers;
+    ppDesignLayer1: TppDesignLayer;
+    ppParameterList1: TppParameterList;
+    pipelineDetalhe: TppDBPipeline;
+    ReportDetalhe: TppReport;
+    ppHeaderBand2: TppHeaderBand;
+    ppLabel1: TppLabel;
+    ppSystemVariable1: TppSystemVariable;
+    ppSystemVariable2: TppSystemVariable;
+    ppLine3: TppLine;
+    ppLine4: TppLine;
+    lbcodigoproduto: TppLabel;
+    lbDescricao: TppLabel;
+    LvValUnitário: TppLabel;
+    LbQdt: TppLabel;
+    lbSubTotal: TppLabel;
+    ppDetailBand2: TppDetailBand;
+    ppDBText1: TppDBText;
+    ppDBText2: TppDBText;
+    ppDBText3: TppDBText;
+    ppDBText4: TppDBText;
+    ppDBText5: TppDBText;
+    ppFooterBand2: TppFooterBand;
+    ppLabel9: TppLabel;
+    ppLabel10: TppLabel;
+    ppDesignLayers2: TppDesignLayers;
+    ppDesignLayer2: TppDesignLayer;
+    ppParameterList2: TppParameterList;
+    ppImage1: TppImage;
+    Período: TppLabel;
+    BtnRelVendas: TButton;
+    PLdataini: TppLabel;
+    PLDatafim: TppLabel;
+    ppLabel11: TppLabel;
+    BtnRelDetalhe: TButton;
+    ppImage2: TppImage;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure BtnGFecharClick(Sender: TObject);
+    procedure BtnFecharDetalheClick(Sender: TObject);
+    procedure BtnDetalheClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure BtnFiltroClick(Sender: TObject);
+    procedure BtnLimpaFiltroClick(Sender: TObject);
+    procedure TotalizarVendas;
+    procedure BtnRelVendasClick(Sender: TObject);
+    procedure PLdatainiGetText(Sender: TObject; var Text: string);
+    procedure PLDatafimGetText(Sender: TObject; var Text: string);
+    procedure BtnRelDetalheClick(Sender: TObject);
+  private
+    { Private declarations }
+    FUCtrlProdutos: TUCtrlProdutos;
+    FUCtrlVendas: TUCtrlVendas;
+    procedure ParemtrizarCamposAoBanco;
+    procedure CarregarDetalheVenda;
+  public
+    { Public declarations }
+  end;
+
+var
+  FrmRelVendas: TFrmRelVendas;
+
+implementation
+
+{$R *.dfm}
+
+procedure TFrmRelVendas.BtnDetalheClick(Sender: TObject);
+begin
+  if FUCtrlVendas.QueryVenda.IsEmpty then
+  begin
+    MessageDlg('Não itens selecionado!',TMsgDlgType.mtWarning,[mbok],0);
+    Exit;
+  end;
+
+  CardPanel1.Visible := True;
+  CardPanel1.BringToFront;
+  CarregarDetalheVenda;
+  BtnFiltro.Enabled := False;
+  BtnLimpaFiltro.Enabled := False;
+  BtnRelVendas.Enabled := false;
+end;
+
+procedure TFrmRelVendas.BtnFecharDetalheClick(Sender: TObject);
+begin
+  CardPanel1.Visible := False;
+  CardPanel1.SendToBack;
+  BtnFiltro.Enabled := True;
+  BtnLimpaFiltro.Enabled := True;
+  BtnRelVendas.Enabled := true;
+end;
+
+procedure TFrmRelVendas.BtnFiltroClick(Sender: TObject);
+begin
+  if DtaFinal.Date < DtaInicial.Date then
+  begin
+    MessageDlg('A data final não pode ser menor que a data inicial!',TMsgDlgType.mtWarning,[mbok],0);
+    Exit;
+  end;
+
+  FUCtrlVendas.CarregarVendas(DtaInicial.Date,DtaFinal.Date, CmbStatus.ItemIndex);
+  FUCtrlVendas.QueryVenda.First;
+  TotalizarVendas;
+end;
+
+procedure TFrmRelVendas.BtnGFecharClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TFrmRelVendas.BtnLimpaFiltroClick(Sender: TObject);
+begin
+   if not FUCtrlVendas.QueryVenda.IsEmpty  then
+   begin
+     FUCtrlVendas.QueryVenda.EmptyDataSet;
+     FUCtrlVendas.QueryVenda.close;
+   end;
+
+   DtaInicial.Date := Now;
+   DtaFinal.Date := Now;
+   CmbStatus.ItemIndex := 0;
+   LbTotalVendas.Caption := '';
+   LbValorTotal.Caption := '';
+end;
+
+procedure TFrmRelVendas.BtnRelDetalheClick(Sender: TObject);
+begin
+ if not FUCtrlVendas.QueryDetalheVenda.IsEmpty  then
+  begin
+    try
+      ReportDetalhe.print;
+    except
+      on E: Exception do
+        MessageDlg('Erro ao visualizar relatório: ' + E.Message,TMsgDlgType.mtError ,[TMsgDlgBtn.mbOK],0);
+    end;
+  end
+  else
+    MessageDlg('Nenhum dado para visualizar. Vendas sem itens!',TMsgDlgType.mtInformation ,[TMsgDlgBtn.mbOK],0);
+end;
+
+procedure TFrmRelVendas.BtnRelVendasClick(Sender: TObject);
+begin
+  if not FUCtrlVendas.QueryVenda.IsEmpty  then
+  begin
+    try
+      ReportVenda.print;
+    except
+      on E: Exception do
+        MessageDlg('Erro ao visualizar relatório: ' + E.Message,TMsgDlgType.mtError ,[TMsgDlgBtn.mbOK],0);
+    end;
+  end
+  else
+    MessageDlg('Nenhum dado para visualizar. Aplique o filtro para buscar os dados de vendas!',TMsgDlgType.mtInformation ,[TMsgDlgBtn.mbOK],0);
+end;
+
+
+procedure TFrmRelVendas.CarregarDetalheVenda;
+begin
+  LbCodigoVenda.Caption := 'Código da Venda: '+FUCtrlVendas.QueryVenda.FieldByName('CODIGO').AsString;
+  LbDataVenda.Caption := 'Data da Venda: '+ FormatDateTime('DD/MM/YYYY',FUCtrlVendas.QueryVenda.FieldByName('DATA').AsDateTime);
+  if FUCtrlVendas.QueryVenda.FieldByName('CANCELADA').AsString = 'N' then
+  begin
+    LbStatusVenda.Caption :='ATIVA';
+    LbStatusVenda.Font.Color := clGreen;
+  end
+  else
+  begin
+    LbStatusVenda.Caption :='CANCELADA';
+    LbStatusVenda.Font.Color := clRed;
+  end;
+
+
+  FUCtrlVendas.CarregarDetalheVenda(FUCtrlVendas.QueryVenda.FieldByName('CODIGO').AsInteger);
+
+  LbFormaPagamento.Caption := FUCtrlVendas.QueryDetalheVenda.FieldByName('DESCRICAO_RECEITA').AsString;
+  LbValorBruto.Caption := 'Valor Bruto: R$ ' + FUCtrlVendas.QueryDetalheVenda.FieldByName('VALOR_SUBTOTAL_FORMATADO').AsString;
+  LbValorDesconto.Caption := 'Desconto: R$ ' + FUCtrlVendas.QueryDetalheVenda.FieldByName('VALOR_DESCONTO_FORMATADO').AsString;
+  LbValorLiquido.Caption := 'Valor Líquido: R$ :' + FUCtrlVendas.QueryDetalheVenda.FieldByName('VALOR_LIQUIDO_FORMATADO').AsString;
+  LbTipoDesconto.Caption := FUCtrlVendas.QueryDetalheVenda.FieldByName('DESCRICAO_DESCONTO').AsString;
+
+end;
+
+procedure TFrmRelVendas.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := TCloseAction.caFree;
+  FreeAndNil(FUCtrlProdutos);
+  FreeAndNil(FUCtrlVendas);
+end;
+
+procedure TFrmRelVendas.FormCreate(Sender: TObject);
+begin
+  FUCtrlProdutos := TUCtrlProdutos.Create;
+  FUCtrlVendas := TUCtrlVendas.Create;
+end;
+
+procedure TFrmRelVendas.FormShow(Sender: TObject);
+begin
+  DtaInicial.Date := Now;
+  DtaFinal.Date := Now;
+  ParemtrizarCamposAoBanco;
+end;
+
+procedure TFrmRelVendas.ParemtrizarCamposAoBanco;
+begin
+  DBVendas.DataSource := FUCtrlVendas.DtsVenda;
+  DBItensVenda.DataSource := FUCtrlVendas.DtsDetalheVenda;
+  PipelineVenda.DataSource := FUCtrlVendas.DtsVenda;
+  pipelineDetalhe.DataSource := FUCtrlVendas.DtsDetalheVenda;
+end;
+
+procedure TFrmRelVendas.PLDatafimGetText(Sender: TObject; var Text: string);
+begin
+  Text:= DateToStr(DtaFinal.Date);
+end;
+
+procedure TFrmRelVendas.PLdatainiGetText(Sender: TObject; var Text: string);
+begin
+  Text:= DateToStr(DtaInicial.Date);
+end;
+
+procedure TFrmRelVendas.TotalizarVendas;
+var
+ VTtotalQtd: integer;
+ VtotalValor: Double;
+begin
+   VtotalValor := 0;
+   VTtotalQtd := 0;
+   FUCtrlVendas.QueryVenda.First;
+   while not FUCtrlVendas.QueryVenda.Eof do
+   begin
+     VtotalValor := VtotalValor + FUCtrlVendas.QueryVenda.FieldByName('VALOR_LIQUIDO').AsFloat;
+     VTtotalQtd :=VTtotalQtd +1;
+     FUCtrlVendas.QueryVenda.Next;
+   end;
+
+   LbTotalVendas.Caption := 'Total de Vendas encontradas: ' + IntToStr(VTtotalQtd);
+   LbValorTotal.Caption := 'Valor Total R$:  '+ FormatFloat('#,##0.00', VtotalValor);
+
+end;
+
+end.

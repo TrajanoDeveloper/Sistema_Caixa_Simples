@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2025/11/18 14:58:49.000.839,=C:\Users\Trajano\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 14:59:11.000.123,C:\Users\Trajano\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.pas=E:\Linx\Principal.pas</Transaction>
+    <Transaction>2025/11/18 14:59:11.000.123,C:\Users\Trajano\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.dfm=E:\Linx\Principal.dfm</Transaction>
+    <Transaction>2025/11/18 14:59:29.000.194,C:\Users\Trajano\OneDrive\Documents\Embarcadero\Studio\Projects\Project1.dproj=E:\Linx\PD_Food.dproj</Transaction>
+    <Transaction>2025/11/18 16:13:31.000.158,=E:\Linx\Funcoes\UValidacoes.pas</Transaction>
+    <Transaction>2025/11/18 16:13:31.000.119,=E:\Linx\Funcoes\UFuncionalidades.pas</Transaction>
+    <Transaction>2025/11/18 16:13:55.000.689,=E:\Linx\InfraData\Uconexao.pas</Transaction>
+    <Transaction>2025/11/18 16:15:51.000.530,=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:16:23.000.088,E:\Linx\Controles\UCtrlProdutos.pas=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:16:31.000.803,=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:16:46.000.393,E:\Linx\Controles\UctrlVendas.pas=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:17:13.000.187,=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:19:37.000.466,E:\Linx\Apresentacao\FormCadGrupoProdutos.dfm=E:\Linx\Unit1.dfm</Transaction>
+    <Transaction>2025/11/18 16:19:37.000.466,E:\Linx\Apresentacao\FormCadGrupoProdutos.pas=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:20:17.000.175,=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:23:00.000.814,E:\Linx\Apresentacao\FormCadProduto.pas=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:23:00.000.814,E:\Linx\Apresentacao\FormCadProduto.dfm=E:\Linx\Unit1.dfm</Transaction>
+    <Transaction>2025/11/18 16:34:01.000.415,=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:34:22.000.235,E:\Linx\Controles\UctrlReceitas.pas=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:34:28.000.404,=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:36:33.000.846,E:\Linx\Controles\UctrlVendas.pas=</Transaction>
+    <Transaction>2025/11/18 16:37:33.000.439,E:\Linx\Controles\UctrlVendas.pas=E:\Linx\Controles\UctrlReceitas.pas</Transaction>
+    <Transaction>2025/11/18 16:37:33.000.453,E:\Linx\Controles\UctrlReceitas.pas=E:\Linx\Controles\UctrlVendas.pas</Transaction>
+    <Transaction>2025/11/18 16:38:22.000.424,E:\Linx\Controles\UctrlReceitas.pas=</Transaction>
+    <Transaction>2025/11/18 16:38:30.000.389,=E:\Linx\Controles\UctrlVendas.pas</Transaction>
+    <Transaction>2025/11/18 16:39:08.000.104,=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:40:11.000.851,E:\Linx\Apresentacao\FormlancVendas.dfm=E:\Linx\Unit1.dfm</Transaction>
+    <Transaction>2025/11/18 16:40:11.000.851,E:\Linx\Apresentacao\FormlancVendas.pas=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:46:42.000.403,=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/18 16:48:26.000.931,E:\Linx\Apresentacao\FormRelVendas.dfm=E:\Linx\Unit1.dfm</Transaction>
+    <Transaction>2025/11/18 16:48:26.000.931,E:\Linx\Apresentacao\FormRelVendas.pas=E:\Linx\Unit1.pas</Transaction>
+    <Transaction>2025/11/19 23:58:19.000.970,E:\Linx\Funcoes\UValidacoes.pas=</Transaction>
+    <Transaction>2026/01/16 18:53:24.075,E:\Projetos\Sistema_Caixa_Simples\Caixa_Simples.dproj=E:\Projetos\Sistema_Caixa_Simples\PD_Food.dproj</Transaction>
+  </Transactions>
+</BorlandProject>

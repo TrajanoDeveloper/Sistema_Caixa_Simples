@@ -1,0 +1,239 @@
+﻿unit UCtrlProdutos;
+
+interface
+uses
+  System.SysUtils, System.Classes, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def,
+  FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Phys.FB,
+  FireDAC.Phys.FBDef, FireDAC.VCLUI.Wait, FireDAC.Comp.Client, Data.DB,
+  FireDAC.Stan.Param, FireDAC.DatS, FireDAC.DApt.Intf, FireDAC.DApt,
+  FireDAC.Comp.DataSet, FireDAC.Phys.IBBase, Dialogs, Datasnap.DBClient,
+  Datasnap.Provider,Data.Win.ADODB,Uconexao, vcl.Controls, Vcl.DBCtrls,
+  Vcl.Forms, UFuncionalidades;
+
+type
+  TUCtrlProdutos = class
+    private
+      Function ExecutarSQL(PSQl: string): Boolean;
+
+    public
+      QueryGrupoProduto : TFDQuery;
+      DtsGrupoProduto : TDataSource;
+      QueryProduto : TFDQuery;
+      DtsProduto : TDataSource;
+      QueryAux: TFDQuery;
+      DtsAux: TDataSource;
+      constructor Create;
+      procedure CarregarDadosGrupoProdutos;
+      procedure CarregarProdutos;
+      procedure CarregarComboGrupoProdutos;
+      procedure PersistenciaGrupoProduto(PTipoPersistencia: TtipoPersistencia);
+      procedure PersistenciaProduto(PTipoPersistencia: TtipoPersistencia; PCodigoGrupoProduto: Integer = 0);
+      function VerificarSeGrupoProdutoVenda(PCodigoGrupoProduto: integer): Boolean;
+      function VerificarSeProdutoVenda(PCodigoProduto: integer): Boolean;
+  end;
+
+implementation
+{ TUCtrlProdutos }
+
+procedure TUCtrlProdutos.CarregarComboGrupoProdutos;
+begin
+
+end;
+
+procedure TUCtrlProdutos.CarregarDadosGrupoProdutos;
+begin
+  QueryGrupoProduto.Close;
+  QueryGrupoProduto.SQL.Clear;
+  QueryGrupoProduto.SQL.Add('SELECT          ');
+  QueryGrupoProduto.SQL.Add('  CODIGO,       ');
+  QueryGrupoProduto.SQL.Add('  DESCRICAO     ');
+  QueryGrupoProduto.SQL.Add('FROM            ');
+  QueryGrupoProduto.SQL.Add(' CADGRUPOPRODUTO');
+  QueryGrupoProduto.SQL.Add(' ORDER BY CODIGO');
+  QueryGrupoProduto.Open;
+end;
+
+procedure TUCtrlProdutos.CarregarProdutos;
+begin
+  QueryProduto.close;
+  QueryProduto.SQL.Clear;
+  QueryProduto.SQL.Add('SELECT                                                                      ');
+  QueryProduto.SQL.Add('    CP.CODIGO,                                                              ');
+  QueryProduto.SQL.Add('    CP.DESCRICAO,                                                           ');
+  QueryProduto.SQL.Add('    CP.CODIGO_GRUPO,                                                        ');
+  QueryProduto.SQL.Add('    REPLACE(CAST(CP.VALOR AS VARCHAR(10)), ''.'', '','') as VALOR_FORMATADO,');
+  QueryProduto.SQL.Add('    CP.VALOR,                                                               ');
+  QueryProduto.SQL.Add('    CG.DESCRICAO AS DESC_GRUPO                                              ');
+  QueryProduto.SQL.Add('FROM                                                                        ');
+  QueryProduto.SQL.Add('  CADPRODUTO CP                                                             ');
+  QueryProduto.SQL.Add('  JOIN CADGRUPOPRODUTO CG                                                   ');
+  QueryProduto.SQL.Add('   ON CP.CODIGO_GRUPO = CG.CODIGO                                           ');
+  QueryProduto.SQL.Add('  ORDER BY CP.CODIGO                                                        ');
+  QueryProduto.Open;
+end;
+
+constructor TUCtrlProdutos.Create;
+var
+  Conexao: Tconecxao;
+begin
+   Conexao := Tconecxao.Create;
+   try
+     QueryGrupoProduto := TFDQuery.Create(nil);
+     DtsGrupoProduto := TDataSource.Create(nil);
+     DtsGrupoProduto.DataSet := QueryGrupoProduto;
+     QueryProduto := TFDQuery.Create(nil);
+     DtsProduto := TDataSource.Create(nil);
+     DtsProduto.DataSet := QueryProduto;
+     QueryAux := TFDQuery.Create(nil);
+     DtsAux := TDataSource.Create(nil);
+     DtsAux.DataSet := QueryAux;
+     Conexao.CarregarParemtrosDeConexao;
+     QueryGrupoProduto.Connection := Conexao.Connection;
+     QueryProduto.Connection := Conexao.Connection;
+     QueryAux.Connection := Conexao.Connection;
+   finally
+     FreeAndNil(Conexao);
+   end;
+end;
+
+function TUCtrlProdutos.ExecutarSQL(PSQl: string): Boolean;
+begin
+ Result := False;
+  QueryAux.Connection.StartTransaction;
+  try
+    QueryAux.SQL.Text := PSQL;
+    QueryAux.ExecSQL;
+    QueryAux.Connection.Commit;
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      QueryAux.Connection.Rollback;
+      MessageDlg('Erro ao executar SQL: ' + E.Message,TMsgDlgType.mtError ,[TMsgDlgBtn.mbOK],0);
+      Result := False;
+    end;
+  end;
+end;
+
+procedure TUCtrlProdutos.PersistenciaGrupoProduto(PTipoPersistencia: TtipoPersistencia);
+var
+  VSql: String;
+begin
+  case PTipoPersistencia of
+    Incluir:
+      begin
+        VSql := 'INSERT INTO CADGRUPOPRODUTO                                         '+
+                '(DESCRICAO)                                                         '+
+                'VALUES                                                              '+
+                '('+QuotedStr(QueryGrupoProduto.FieldByName('DESCRICAO').AsString)+')';
+
+        ExecutarSQL(VSql);
+      end;
+    Alterar:
+      begin
+         VSql := 'UPDATE CADGRUPOPRODUTO SET                                                    '+
+                 ' DESCRICAO = '+ QuotedStr(QueryGrupoProduto.FieldByName('DESCRICAO').AsString) +
+                 ' WHERE CODIGO = '+ IntToStr(QueryGrupoProduto.FieldByName('CODIGO').AsInteger);
+
+         ExecutarSQL(VSql);
+      end;
+    Excluir:
+      begin
+         PersistenciaProduto(Excluir, QueryGrupoProduto.FieldByName('CODIGO').AsInteger);
+         VSQL := 'DELETE FROM CADGRUPOPRODUTO WHERE CODIGO = '+
+                 IntToStr(QueryGrupoProduto.FieldByName('CODIGO').AsInteger);
+
+         ExecutarSQL(VSql);
+      end;
+  end;
+end;
+
+procedure TUCtrlProdutos.PersistenciaProduto(
+  PTipoPersistencia: TtipoPersistencia; PCodigoGrupoProduto: Integer);
+var
+  VSql: String;
+begin
+  case PTipoPersistencia of
+    Incluir:
+      begin
+        VSql := 'INSERT INTO CADPRODUTO                                          '+
+                '(DESCRICAO, CODIGO_GRUPO, VALOR)                                '+
+                'VALUES                                                          '+
+                '('+QuotedStr(QueryProduto.FieldByName('DESCRICAO').AsString)+', '+
+                IntToStr(QueryProduto.FieldByName('CODIGO_GRUPO').AsInteger)+',  '+
+                FloatToStr(QueryProduto.FieldByName('VALOR').AsFloat)+')         ';
+
+        ExecutarSQL(VSql);
+
+      end;
+    Alterar:
+      begin
+        VSql := 'UPDATE CADPRODUTO SET                                                             '+
+                ' DESCRICAO = '+QuotedStr(QueryProduto.FieldByName('DESCRICAO').AsString)      +', '+
+                ' CODIGO_GRUPO = '+IntToStr(QueryProduto.FieldByName('CODIGO_GRUPO').AsInteger)+', '+
+                ' VALOR = '+FloatToStr(QueryProduto.FieldByName('VALOR').AsFloat)                   +
+                '  WHERE CODIGO = '+ IntToStr(QueryProduto.FieldByName('CODIGO').AsInteger)         ;
+
+        ExecutarSQL(VSql);
+      end;
+    Excluir:
+      begin
+        if PCodigoGrupoProduto > 0 then
+          VSql := 'DELETE FROM CADPRODUTO WHERE CODIGO_GRUPO = '+IntToStr(PCodigoGrupoProduto)
+        else
+          VSql := 'DELETE FROM CADPRODUTO WEHRE CODIGO = '+
+            IntToStr(QueryProduto.FieldByName('CODIGO').AsInteger);
+
+        ExecutarSQL(VSql);
+      end;
+  end;
+end;
+
+function TUCtrlProdutos.VerificarSeGrupoProdutoVenda(
+  PCodigoGrupoProduto: integer): Boolean;
+begin
+  Result:= False;
+
+  QueryAux.Close;
+  QueryAux.SQL.Clear;
+  QueryAux.sql.Add('SELECT                                       ');
+  QueryAux.sql.Add('  1                                          ');
+  QueryAux.sql.Add('FROM                                         ');
+  QueryAux.sql.Add('  VENDAITEM VI                               ');
+  QueryAux.sql.Add('  JOIN CADPRODUTO CP                         ');
+  QueryAux.sql.Add('   ON VI.CODIGO_PRODUTO = CP.CODIGO          ');
+  QueryAux.sql.Add('  JOIN CADGRUPOPRODUTO CG                    ');
+  QueryAux.sql.Add('   ON CG.CODIGO = CP.CODIGO_GRUPO            ');
+  QueryAux.sql.Add(' WHERE                                       ');
+  QueryAux.sql.Add('   CG.CODIGO = '+IntToStr(PCodigoGrupoProduto));
+
+  QueryAux.Open;
+
+  if not QueryAux.IsEmpty then
+    Result := True;
+end;
+
+function TUCtrlProdutos.VerificarSeProdutoVenda(
+  PCodigoProduto: integer): Boolean;
+begin
+  Result:= False;
+
+  QueryAux.Close;
+  QueryAux.SQL.Clear;
+  QueryAux.sql.Add('SELECT                                  ');
+  QueryAux.sql.Add('  1                                     ');
+  QueryAux.sql.Add('FROM                                    ');
+  QueryAux.sql.Add('  VENDAITEM VI                          ');
+  QueryAux.sql.Add('  JOIN CADPRODUTO CP                    ');
+  QueryAux.sql.Add('   ON VI.CODIGO_PRODUTO = CP.CODIGO     ');
+  QueryAux.sql.Add(' WHERE                                  ');
+  QueryAux.sql.Add('   CP.CODIGO = '+IntToStr(PCodigoProduto));
+
+  QueryAux.Open;
+
+  if not QueryAux.IsEmpty then
+    Result := True;
+end;
+
+end.

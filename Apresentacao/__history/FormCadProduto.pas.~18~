@@ -1,0 +1,245 @@
+unit FormCadProduto;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Data.DB,
+  Vcl.Grids, Vcl.DBGrids, Vcl.Mask, Vcl.DBCtrls,  UFuncionalidades, UCtrlProdutos;
+
+type
+  THabilitaBotoes = (todos, novo, pesquisa, limpar);
+  TFrmCadProduto = class(TForm)
+    Panel1: TPanel;
+    Panel2: TPanel;
+    Btn_novo: TButton;
+    Btn_Salvar: TButton;
+    Btn_Excluir: TButton;
+    Btn_Limpar: TButton;
+    Btn_Fechar: TButton;
+    GroupBox1: TGroupBox;
+    Label1: TLabel;
+    GroupBox2: TGroupBox;
+    DBGridProdutos: TDBGrid;
+    Label2: TLabel;
+    Label3: TLabel;
+    EdtDescricao: TDBEdit;
+    EdtValor: TDBEdit;
+    Label4: TLabel;
+    DbCmbGrupo: TDBLookupComboBox;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormCreate(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure Btn_FecharClick(Sender: TObject);
+    procedure Btn_LimparClick(Sender: TObject);
+    procedure Btn_ExcluirClick(Sender: TObject);
+    procedure Btn_SalvarClick(Sender: TObject);
+    procedure Btn_novoClick(Sender: TObject);
+    procedure DBGridProdutosMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure DBGridProdutosDblClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+    FUCtrlProdutos: TUCtrlProdutos;
+    HabilitaBotoes: THabilitaBotoes;
+    procedure ParemtrizarCamposAoBanco;
+    Procedure LimparCampos;
+    procedure HabilitarCampos(Habilitar: Boolean);
+    procedure HabilitarBotoes(HabilitaBotao: THabilitaBotoes);
+    procedure ImputarDados;
+  end;
+
+var
+  FrmCadProduto: TFrmCadProduto;
+
+implementation
+
+{$R *.dfm}
+
+procedure TFrmCadProduto.Btn_ExcluirClick(Sender: TObject);
+begin
+  if FUCtrlProdutos.VerificarSeProdutoVenda(FUCtrlProdutos.QueryProduto.FieldByName('CODIGO').AsInteger) then
+  begin
+    MessageDlg('Grupo de produto já utilizado em venda!',TMsgDlgType.mtInformation,[mbok],0);
+    exit;
+  end;
+  if MessageDlg('Você tem certeza que deseja excluir este produto?',mtConfirmation,[mbyes,mbno],0)=mryes then
+  begin
+    FUCtrlProdutos.PersistenciaProduto(Excluir);
+    FUCtrlProdutos.CarregarProdutos;
+  end;
+  HabilitarBotoes(todos);
+  LimparCampos;
+end;
+
+procedure TFrmCadProduto.Btn_FecharClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TFrmCadProduto.Btn_LimparClick(Sender: TObject);
+begin
+  LimparCampos;
+  HabilitarBotoes(todos);
+  HabilitarCampos(False);
+end;
+
+procedure TFrmCadProduto.Btn_novoClick(Sender: TObject);
+begin
+  LimparCampos;
+  HabilitarBotoes(novo);
+  HabilitarCampos(True);
+  if not FUCtrlProdutos.QueryProduto.Active then
+    FUCtrlProdutos.QueryProduto.Active := True;
+  FUCtrlProdutos.QueryProduto.Insert;
+  EdtDescricao.SetFocus;
+end;
+
+procedure TFrmCadProduto.Btn_SalvarClick(Sender: TObject);
+begin
+  if FUCtrlProdutos.QueryProduto.State in [dsEdit] then
+  begin
+    //ImputarDados;
+    FUCtrlProdutos.PersistenciaProduto(Alterar);
+  end;
+  if FUCtrlProdutos.QueryProduto.State in [dsInsert] then
+  begin
+    ImputarDados;
+    FUCtrlProdutos.PersistenciaProduto(Incluir);
+  end;
+  FUCtrlProdutos.CarregarProdutos;
+  HabilitarBotoes(todos);
+  HabilitarCampos(False);
+  LimparCampos;
+end;
+
+procedure TFrmCadProduto.DBGridProdutosDblClick(Sender: TObject);
+begin
+  HabilitarCampos(true);
+  DbCmbGrupo.KeyValue := FUCtrlProdutos.QueryProduto.FieldByName('CODIGO_GRUPO').AsVariant;
+  EdtDescricao.Text := FUCtrlProdutos.QueryProduto.FieldByName('DESCRICAO').AsString;
+  EdtValor.Text := FUCtrlProdutos.QueryProduto.FieldByName('valor').AsString;
+end;
+
+procedure TFrmCadProduto.DBGridProdutosMouseUp(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  Sleep(10);
+  LimparCampos;
+  HabilitarBotoes(todos);
+end;
+
+procedure TFrmCadProduto.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+   action := TCloseAction.caFree;
+   FreeAndNil(FUCtrlProdutos);
+end;
+
+procedure TFrmCadProduto.FormCreate(Sender: TObject);
+begin
+  FUCtrlProdutos := TUCtrlProdutos.Create;
+  HabilitarCampos(false);
+  HabilitarBotoes(todos);
+end;
+
+procedure TFrmCadProduto.FormShow(Sender: TObject);
+begin
+  FUCtrlProdutos.CarregarDadosGrupoProdutos;
+  FUCtrlProdutos.CarregarProdutos;
+  ParemtrizarCamposAoBanco;
+end;
+
+procedure TFrmCadProduto.HabilitarBotoes(HabilitaBotao: THabilitaBotoes);
+begin
+  case HabilitaBotao of
+    todos:
+    begin
+     Btn_novo.Enabled := true;
+     Btn_Salvar.Enabled := true;
+     Btn_Excluir.Enabled := true;
+     Btn_Limpar.Enabled := true;
+     Btn_Fechar.Enabled := true;
+    end;
+    novo:
+    begin
+      Btn_Excluir.Enabled := false;
+      Btn_novo.Enabled := False;
+    end;
+    pesquisa:
+    begin
+     Btn_novo.Enabled := False;
+     Btn_Salvar.Enabled := False;
+     Btn_Excluir.Enabled := False;
+     Btn_Limpar.Enabled := False;
+     Btn_Fechar.Enabled := true;
+    end;
+    limpar:
+    begin
+     Btn_novo.Enabled := true;
+     Btn_Salvar.Enabled := true;
+     Btn_Excluir.Enabled := true;
+     Btn_Limpar.Enabled := true;
+     Btn_Fechar.Enabled := true;
+    end;
+  end;
+end;
+
+procedure TFrmCadProduto.HabilitarCampos(Habilitar: Boolean);
+var
+  I: Integer;
+begin
+  for I := 0 to ComponentCount  - 1 do
+   begin
+     if Components[I] is TDBEdit  then
+     begin
+       (Components[I] as TDBEdit).Enabled := Habilitar;
+     end;
+     if Components[I] is TDBLookupComboBox then
+     begin
+       (Components[I] as TDBLookupComboBox).Enabled := Habilitar;
+     end;
+
+    end;
+end;
+
+procedure TFrmCadProduto.ImputarDados;
+begin
+  {FUCtrlProdutos.QueryProduto.FieldByName('DESCRICAO').AsString := EdtDescricao.Text;
+  FUCtrlProdutos.QueryProduto.FieldByName('CODIGO_GRUPO').AsInteger := DbCmbGrupo.KeyValue;}
+  FUCtrlProdutos.QueryProduto.FieldByName('VALOR').AsFloat := TFuncionalidades.FormatarTextoValor(EdtValor.Text);
+end;
+
+procedure TFrmCadProduto.LimparCampos;
+   procedure EsvaziarCampos;
+   begin
+     EdtDescricao.Text := '';
+     EdtValor.Text := '';
+     DbCmbGrupo.KeyValue :=null;
+   end;
+begin
+
+  if not FUCtrlProdutos.QueryProduto.Active then
+     Exit;
+
+   if (FUCtrlProdutos.QueryProduto.State in [dsInsert, dsEdit]) then
+     FUCtrlProdutos.QueryProduto.Cancel;
+   HabilitarCampos(False);
+   EsvaziarCampos;
+
+end;
+
+procedure TFrmCadProduto.ParemtrizarCamposAoBanco;
+begin
+   DbCmbGrupo.ListSource := FUCtrlProdutos.DtsGrupoProduto;
+   DBGridProdutos.DataSource := FUCtrlProdutos.DtsProduto;
+   EdtDescricao.DataSource := FUCtrlProdutos.DtsProduto;
+   EdtDescricao.DataField := 'DESCRICAO';
+   EdtValor.DataSource := FUCtrlProdutos.DtsProduto;
+   EdtValor.DataField := 'VALOR';
+   EdtDescricao.Text := '';
+   EdtValor.Text := '';
+end;
+
+end.

@@ -93,8 +93,6 @@ Visão geral da estrutura principal do projeto:
 
 ## Descrição do Projeto
 
-Este projeto implementa a solução proposta na avaliação técnica **“Avaliação Delphi - DEVELOPER-SR”**, cujo objetivo é construir um **sistema de caixa simples (PD_FOOD)** para um estabelecimento do segmento de alimentação rápida.
-
 o sistema foi modelado para contemplar:
 
 - **Cadastro de Grupos de Produtos**  
